@@ -4,16 +4,25 @@ EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
-WORKDIR /src
-COPY ["./data/blazor_bootcamp/blazor_bootcamp.csproj", "."]
-RUN dotnet restore "blazor_bootcamp.csproj"
-COPY . .
-RUN dotnet build "./data/blazor_bootcamp/blazor_bootcamp.csproj" -c Release -o /app/build
+WORKDIR /app/src
+COPY ["./data/blazor_bootcamp", "."]
+RUN dotnet restore "TangyWeb_Server/TangyWeb_Server.csproj" && \
+    dotnet restore "TangyWeb_Client/TangyWeb_Client.csproj" && \
+    dotnet restore "Tangy_Models/Tangy_Models.csproj"
+
+RUN dotnet build "TangyWeb_Server/TangyWeb_Server.csproj" -c Release -o "/app/bin" && \
+    dotnet build "TangyWeb_Client/TangyWeb_Client.csproj" -c Release -o "/app/bin" && \
+    dotnet build "Tangy_Models/Tangy_Models.csproj" -c Release -o "/app/bin"
 
 FROM build AS publish
-RUN dotnet publish "./data/blazor_bootcamp/blazor_bootcamp.csproj" -c Release -o /app/publish
+
+RUN dotnet publish "TangyWeb_Server/TangyWeb_Server.csproj" -c Release -o "/app/publish" && \
+    dotnet publish "TangyWeb_Client/TangyWeb_Client.csproj" -c Release -o "/app/publish" && \
+    dotnet publish "Tangy_Models/Tangy_Models.csproj" -c Release -o "/app/publish"
 
 FROM base AS final
+EXPOSE 5000
+EXPOSE 443
 WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "blazor_bootcamp.dll"]
+#RUN dotnet dev-certs https --clean && dotnet dev-certs https --trust
+ENTRYPOINT ["dotnet", "/app/publish/TangyWeb_Server/TangyWeb_Server.dll", "--urls", "http://0.0.0.0:5000"]
